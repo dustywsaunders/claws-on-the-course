@@ -19,7 +19,7 @@ export default class GameScene extends Phaser.Scene {
     // Create enemy group
     this.enemies = this.physics.add.group();
 
-    this.time.addEvent({
+    this.enemySpawnEvent = this.time.addEvent({
       delay: 1000,
       callback: this.spawnEnemy,
       callbackScope: this,
@@ -44,6 +44,13 @@ export default class GameScene extends Phaser.Scene {
       right: "D",
     });
 
+    this.playerMaxHp = 100;
+    this.playerHp = 100;
+    this.isPlayerDead = false;
+
+    this.lastDamageTime = 0;
+    this.damageCooldown = 300; // ms
+
     // TEMPORARY enemy counter
     this.enemyCounterText = this.add.text(10, 10, "Enemies: 0", {
       fontSize: "18px",
@@ -52,9 +59,27 @@ export default class GameScene extends Phaser.Scene {
 
     this.enemyCounterText.setDepth(1000);
     this.enemyCounterText.setScrollFactor(0);
+
+    // Health bar background
+    this.healthBarBg = this.add
+      .rectangle(10, 40, 200, 20, 0x222222)
+      .setOrigin(0, 0)
+      .setScrollFactor(0);
+
+    // Health bar fill
+    this.healthBar = this.add
+      .rectangle(10, 40, 200, 20, 0x00ff00)
+      .setOrigin(0, 0)
+      .setScrollFactor(0);
   }
 
   update() {
+    // Set death state
+    if (this.isPlayerDead) {
+      this.player.body.setVelocity(0);
+      return;
+    }
+
     // Update player controls
     const speed = 200;
     const body = this.player.body;
@@ -93,6 +118,28 @@ export default class GameScene extends Phaser.Scene {
 
     // TEMPORARY enemy counter
     this.enemyCounterText.setText("Enemies: " + this.enemies.countActive(true));
+
+    // Health bar
+    if (!this.isPlayerDead) {
+      const healthPercent = Phaser.Math.Clamp(
+        this.playerHp / this.playerMaxHp,
+        0,
+        1,
+      );
+      this.healthBar.width = Math.floor(200 * healthPercent);
+
+      // Change color when low
+      if (healthPercent > 0.6) {
+        this.healthBar.setFillStyle(0x00ff00);
+      } else if (healthPercent > 0.3) {
+        this.healthBar.setFillStyle(0xffff00);
+      } else {
+        this.healthBar.setFillStyle(0xff0000);
+      }
+    } else {
+      // Ensure it stays zero
+      this.healthBar.width = 0;
+    }
   }
 
   spawnEnemy() {
@@ -124,5 +171,47 @@ export default class GameScene extends Phaser.Scene {
     enemy.body.setCollideWorldBounds(true);
 
     this.enemies.add(enemy);
+  }
+
+  handlePlayerHit(player, enemy) {
+    const now = this.time.now;
+
+    if (now < this.lastDamageTime + this.damageCooldown) {
+      return;
+    }
+
+    this.lastDamageTime = now;
+
+    this.playerHp = Phaser.Math.Clamp(this.playerHp - 10, 0, this.playerMaxHp);
+
+    if (this.playerHp < 0) {
+      this.playerHp = 0;
+    }
+
+    console.log("HP:", this.playerHp);
+
+    if (this.playerHp <= 0 && !this.isPlayerDead) {
+      this.isPlayerDead = true;
+      this.player.setFillStyle(0x555555);
+
+      // Stop spawning
+      this.enemySpawnEvent.remove(false);
+
+      // Stop all enemies
+      this.enemies.getChildren().forEach((enemy) => {
+        enemy.body.setVelocity(0);
+      });
+
+      // Kill health bar visually
+      this.healthBar.width = 0;
+
+      // Optional: show text
+      this.add
+        .text(400, 300, "YOU DIED", {
+          fontSize: "48px",
+          fill: "#ffffff",
+        })
+        .setOrigin(0.5);
+    }
   }
 }
