@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import UISystem from "./UISystem";
 import CombatSystem from "./CombatSystem";
 
 export default class GameScene extends Phaser.Scene {
@@ -9,7 +10,8 @@ export default class GameScene extends Phaser.Scene {
   preload() {}
 
   create() {
-    // Define combat system
+    // Define systems
+    this.ui = new UISystem(this);
     this.combat = new CombatSystem(this);
 
     // Set world bounds
@@ -101,87 +103,13 @@ export default class GameScene extends Phaser.Scene {
       this,
     );
 
-    // TEMPORARY enemy counter
-    this.enemyCounterText = this.add.text(10, 10, "Enemies: 0", {
-      fontSize: "18px",
-      fill: "#ffffff",
-    });
-
-    this.enemyCounterText.setDepth(1000);
-    this.enemyCounterText.setScrollFactor(0);
-
-    // Health bar background
-    this.healthBarBg = this.add
-      .rectangle(10, 40, 200, 20, 0x222222)
-      .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setDepth(1000)
-      .setAlpha(0.7);
-
-    // Health bar fill
-    this.healthBar = this.add
-      .rectangle(10, 40, 200, 20, 0x00ff00)
-      .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setDepth(1001)
-      .setAlpha(0.7);
-
-    this.healthText = this.add
-      .text(10, 65, "", {
-        fontSize: "14px",
-        fill: "#ffffff",
-      })
-      .setScrollFactor(0)
-      .setDepth(1002);
-
-    // xp bar
     // Player Level
     this.playerStats.level = 1;
     this.playerStats.xp = 0;
     this.playerStats.xpToLevel = 50; // first level threshold
 
-    this.levelText = this.add.text(
-      580,
-      10, // top-right
-      "Level: " + this.playerStats.level,
-      { fontSize: "18px", fill: "#ffffff" },
-    );
-    this.levelText.setDepth(1000);
-    this.levelText.setScrollFactor(0);
-
-    // XP bar background
-    this.xpBarBg = this.add
-      .rectangle(580, 40, 200, 20, 0x222222)
-      .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setDepth(1000)
-      .setAlpha(0.7);
-
-    // XP bar fill
-    this.xpBar = this.add
-      .rectangle(580, 40, 0, 20, 0x0000ff) // width will grow
-      .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setDepth(1001)
-      .setAlpha(0.7);
-
-    this.xpText = this.add
-      .text(790, 65, "", {
-        fontSize: "14px",
-        fill: "#ffffff",
-      })
-      .setOrigin(1, 0)
-      .setScrollFactor(0)
-      .setDepth(1002);
-
     // Timer
     this.startTime = this.time.now;
-
-    this.timerText = this.add
-      .text(400, 10, "Time: 0s", { fontSize: "18px", fill: "#ffffff" })
-      .setOrigin(0.5, 0); // centered
-    this.timerText.setDepth(1000);
-    this.timerText.setScrollFactor(0);
 
     // Upgrades
     this.upgrades = [
@@ -245,61 +173,10 @@ export default class GameScene extends Phaser.Scene {
     this.handlePlayerMovement();
     this.handleEnemyMovement();
     this.combat.updateProjectiles();
-    this.updateUI();
-    this.updateTimer();
+    this.ui.update();
   }
 
   // --- FUNCTIONS --- //
-
-  // --- UI --- //
-
-  updateUI() {
-    this.enemyCounterText.setText("Enemies: " + this.enemies.countActive(true));
-
-    if (!this.isPlayerDead) {
-      const healthPercent = Phaser.Math.Clamp(
-        this.playerStats.hp / this.playerStats.maxHp,
-        0,
-        1,
-      );
-
-      this.healthBar.width = Math.floor(200 * healthPercent);
-
-      if (healthPercent > 0.6) {
-        this.healthBar.setFillStyle(0x00ff00);
-      } else if (healthPercent > 0.3) {
-        this.healthBar.setFillStyle(0xffff00);
-      } else {
-        this.healthBar.setFillStyle(0xff0000);
-      }
-    } else {
-      this.healthBar.width = 0;
-    }
-
-    this.healthText.setText(
-      `${Math.floor(this.playerStats.hp)} / ${this.playerStats.maxHp}`,
-    );
-
-    const xpPercent = Phaser.Math.Clamp(
-      this.playerStats.xp / this.playerStats.xpToLevel,
-      0,
-      1,
-    );
-    this.xpBar.width = Math.floor(200 * xpPercent);
-    this.xpText.setText(
-      `${this.playerStats.xp} / ${this.playerStats.xpToLevel}`,
-    );
-    this.levelText.setText("Level: " + this.playerStats.level);
-  }
-
-  updateTimer() {
-    const elapsedSeconds = Math.floor((this.time.now - this.startTime) / 1000);
-    const minutes = Math.floor(elapsedSeconds / 60);
-    const seconds = elapsedSeconds % 60;
-    const paddedSeconds = seconds.toString().padStart(2, "0");
-
-    this.timerText.setText(`${minutes}:${paddedSeconds}`);
-  }
 
   // --- PLAYER --- //
 
@@ -363,9 +240,6 @@ export default class GameScene extends Phaser.Scene {
       this.enemies.getChildren().forEach((enemy) => {
         enemy.body.setVelocity(0);
       });
-
-      // Kill health bar visually
-      this.healthBar.width = 0;
 
       // Optional: show death text
       const deathText = this.add
