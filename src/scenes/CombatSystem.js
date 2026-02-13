@@ -99,6 +99,15 @@ export default class CombatSystem {
     const { x, y } = enemy;
 
     enemy.destroy();
-    scene.spawnXpOrb(x, y, enemy.xpValue);
+
+    // Decide to drop XP or HEALTH
+    // Currently at 20/80 Health to XP ratio
+    const dropRoll = Math.random();
+
+    if (dropRoll < 0.2) {
+      scene.spawnHealthPickup(x, y, 10);
+    } else {
+      scene.spawnXpOrb(x, y, enemy.xpValue);
+    }
   }
 }

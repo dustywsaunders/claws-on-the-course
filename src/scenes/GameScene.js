@@ -109,6 +109,16 @@ export default class GameScene extends Phaser.Scene {
       this,
     );
 
+    // Health Drops
+    this.healthPickups = this.physics.add.group();
+    this.physics.add.overlap(
+      this.player,
+      this.healthPickups,
+      this.collectHealth,
+      null,
+      this,
+    );
+
     // Player Level
     this.playerStats.level = 1;
     this.playerStats.xp = 0;
@@ -119,14 +129,13 @@ export default class GameScene extends Phaser.Scene {
 
     // Upgrades
     this.upgrades = [
-      // {
-      //   key: "maxHp",
-      //   label: "Increase Max Health (+20)",
-      //   apply: () => {
-      //     this.playerStats.maxHp += 20;
-      //     this.playerStats.hp += 20;
-      //   },
-      // },
+      {
+        key: "maxHp",
+        label: "Increase Max Health (+10)",
+        apply: () => {
+          this.playerStats.maxHp += 10;
+        },
+      },
       {
         key: "moveSpeed",
         label: "Increase Move Speed (+10)",
@@ -146,7 +155,7 @@ export default class GameScene extends Phaser.Scene {
       },
       {
         key: "fireRate",
-        label: "Increase Fire Rate (-50)",
+        label: "Increase Fire Rate (-50ms)",
         apply: () => {
           this.playerStats.fireRate = Math.max(
             100,
@@ -164,9 +173,9 @@ export default class GameScene extends Phaser.Scene {
       },
       {
         key: "xpBoost",
-        label: "Increase XP Per Orb (+1)",
+        label: "Increase XP Per Orb (+0.2)",
         apply: () => {
-          this.playerStats.xpMultiplier += 1;
+          this.playerStats.xpMultiplier += 0.2;
         },
       },
     ];
@@ -381,6 +390,26 @@ export default class GameScene extends Phaser.Scene {
     this.playerStats.xp += orb.value * this.playerStats.xpMultiplier;
     orb.destroy();
     this.checkLevelUp();
+  }
+
+  // --- HEALTH --- //
+
+  spawnHealthPickup(x, y, amount) {
+    const pickup = this.add.rectangle(x, y, 10, 10, 0xff77aa);
+    this.physics.add.existing(pickup);
+    pickup.body.setAllowGravity(false);
+    pickup.value = amount;
+    pickup.setDepth(1);
+
+    this.healthPickups.add(pickup);
+  }
+
+  collectHealth(player, pickup) {
+    const ps = this.playerStats;
+
+    ps.hp = Phaser.Math.Clamp(ps.hp + pickup.value, 0, ps.maxHp);
+
+    pickup.destroy();
   }
 
   // --- LEVEL UPS --- //
