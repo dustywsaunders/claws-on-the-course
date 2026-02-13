@@ -28,7 +28,9 @@ export default class StartScene extends Phaser.Scene {
         `
 WASD / Arrow Keys - Move/Select
 ENTER / SPACE - Choose Upgrades
-Auto-shoots nearest enemy
+ESC - Pause Game
+
+Auto attacks nearest enemy
 Survive as long as possible
 
 Press ENTER or SPACE to start
@@ -40,7 +42,7 @@ Press ENTER or SPACE to start
           lineSpacing: 10,
         },
       )
-      .setOrigin(0.5);
+      .setOrigin(0.5, 0.3);
 
     // Input
     this.startKeys = this.input.keyboard.addKeys({

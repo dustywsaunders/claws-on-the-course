@@ -1,10 +1,8 @@
 TO DO:
 
 GAME FEATURES/REFACTOR:
-- On death screen add text that says "Enter/Space to retry". Goes back to start menu!!!
 - Add health drops to increase total health pool.
 - Extract WeaponSystem (multi-shot, spread, cooldowns)
 - Extract EnemyAISystem (smarter enemies, variety, bosses)
 - Extract UpgradeSystem
-- Add scene restart
 - Add damage events & modifiers

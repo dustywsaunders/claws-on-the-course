@@ -17,6 +17,9 @@ export default class GameScene extends Phaser.Scene {
     this.ui = new UISystem(this);
     this.combat = new CombatSystem(this);
 
+    // Set pause action
+    this.pauseKey = this.input.keyboard.addKey("ESC");
+
     // Set world bounds
     this.physics.world.setBounds(0, 0, 800, 600);
 
@@ -170,6 +173,24 @@ export default class GameScene extends Phaser.Scene {
   }
 
   update() {
+    // Handle retry
+    if (this.isPlayerDead && this.deathKeys) {
+      if (
+        Phaser.Input.Keyboard.JustDown(this.deathKeys.enter) ||
+        Phaser.Input.Keyboard.JustDown(this.deathKeys.space)
+      ) {
+        this.scene.start("StartScene");
+      }
+      return;
+    }
+
+    // Handle pause
+    if (Phaser.Input.Keyboard.JustDown(this.pauseKey) && !this.isPlayerDead) {
+      this.scene.launch("PauseScene");
+      this.scene.pause();
+      return;
+    }
+
     if (this.handleUpgradeInput()) return;
     if (this.handleDeathState()) return;
 
@@ -244,7 +265,7 @@ export default class GameScene extends Phaser.Scene {
         enemy.body.setVelocity(0);
       });
 
-      // Optional: show death text
+      // Show death text
       const deathText = this.add
         .text(400, 300, "YOU DIED", {
           fontSize: "48px",
@@ -252,6 +273,21 @@ export default class GameScene extends Phaser.Scene {
         })
         .setOrigin(0.5);
       deathText.setDepth(1000);
+
+      // Restart instruction
+      this.add
+        .text(400, 360, "Press ENTER or SPACE to return to menu", {
+          fontSize: "20px",
+          fill: "#cccccc",
+        })
+        .setOrigin(0.5)
+        .setDepth(1000);
+
+      // Listen for restart input
+      this.deathKeys = this.input.keyboard.addKeys({
+        enter: "ENTER",
+        space: "SPACE",
+      });
     }
   }
 
