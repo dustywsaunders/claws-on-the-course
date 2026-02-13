@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import CombatSystem from "./CombatSystem";
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -8,6 +9,9 @@ export default class GameScene extends Phaser.Scene {
   preload() {}
 
   create() {
+    // Define combat system
+    this.combat = new CombatSystem(this);
+
     // Set world bounds
     this.physics.world.setBounds(0, 0, 800, 600);
 
@@ -27,13 +31,13 @@ export default class GameScene extends Phaser.Scene {
     // Projectile timer
     this.fireTimer = this.time.addEvent({
       delay: this.playerStats.fireRate,
-      callback: this.fireProjectile,
+      callback: () => this.combat.fireProjectile(),
       callbackScope: this,
       loop: true,
     });
 
     // Add simple player placeholder
-    this.player = this.add.rectangle(400, 300, 40, 40, 0x00ff00);
+    this.player = this.add.rectangle(400, 300, 30, 30, 0x00ff00);
     this.physics.add.existing(this.player);
     this.player.body.setCollideWorldBounds(true);
     this.player.setDepth(2);
@@ -240,7 +244,7 @@ export default class GameScene extends Phaser.Scene {
 
     this.handlePlayerMovement();
     this.handleEnemyMovement();
-    this.handleProjectiles();
+    this.combat.updateProjectiles();
     this.updateUI();
     this.updateTimer();
   }
@@ -435,101 +439,15 @@ export default class GameScene extends Phaser.Scene {
 
   // --- PROJECTILES --- //
 
-  fireProjectile() {
-    if (this.isPlayerDead) return; // don't shoot when dead
-
-    // Find nearest enemy
-    const enemiesAlive = this.enemies.getChildren().filter((e) => !e.isDead);
-    if (enemiesAlive.length === 0) return;
-
-    let closest = enemiesAlive[0];
-    let minDist = Phaser.Math.Distance.Between(
-      this.player.x,
-      this.player.y,
-      closest.x,
-      closest.y,
-    );
-
-    enemiesAlive.forEach((enemy) => {
-      const dist = Phaser.Math.Distance.Between(
-        this.player.x,
-        this.player.y,
-        enemy.x,
-        enemy.y,
-      );
-      if (dist < minDist) {
-        minDist = dist;
-        closest = enemy;
-      }
-    });
-
-    // Create projectile
-    const projectile = this.add.rectangle(
-      this.player.x,
-      this.player.y,
-      8,
-      8,
-      0xffff00,
-    );
-    this.physics.add.existing(projectile);
-    projectile.body.setAllowGravity(false);
-    projectile.speed = 400;
-    projectile.target = closest;
-
-    // Add to group
-    this.projectiles.add(projectile);
-  }
-
-  handleProjectiles() {
-    this.projectiles.getChildren().forEach((proj) => {
-      if (!proj.target || proj.target.isDead) {
-        proj.destroy();
-        return;
-      }
-
-      const dx = proj.target.x - proj.x;
-      const dy = proj.target.y - proj.y;
-      const length = Math.sqrt(dx * dx + dy * dy);
-      const speed = proj.speed;
-
-      if (length < 5) {
-        proj.target.hp -= this.playerStats.damage;
-
-        proj.target.setFillStyle(0xff9999);
-
-        this.time.delayedCall(50, () => {
-          if (proj.target && proj.target.active) {
-            proj.target.setFillStyle(0xff0000);
-          }
-        });
-
-        if (proj.target.hp <= 0 && !proj.target.isDead) {
-          proj.target.hp = 0;
-          proj.target.isDead = true;
-
-          const { x, y } = proj.target;
-
-          proj.target.destroy();
-          this.spawnXpOrb(x, y, proj.target.xpValue);
-        }
-
-        proj.destroy();
-        return;
-      }
-
-      proj.body.setVelocity((dx / length) * speed, (dy / length) * speed);
-    });
-  }
-
   updateFireRate() {
     if (this.fireTimer) {
-      this.fireTimer.remove(false); // remove old timer
+      this.fireTimer.remove(false);
+      this.fireTimer = null;
     }
 
     this.fireTimer = this.time.addEvent({
       delay: this.playerStats.fireRate,
-      callback: this.fireProjectile,
-      callbackScope: this,
+      callback: () => this.combat.fireProjectile(),
       loop: true,
     });
   }
@@ -620,10 +538,10 @@ export default class GameScene extends Phaser.Scene {
         `
         Level: ${this.playerStats.level}
         HP: ${this.playerStats.hp}/${this.playerStats.maxHp}
-        Speed: ${this.playerSpeed}
-        Damage: ${this.weaponDamage}
-        Fire Rate: 1/${this.fireRate}mss
-        Enemy Speed: ${this.enemySpeed}
+        Speed: ${this.playerStats.moveSpeed}
+        Damage: ${this.playerStats.damage}
+        Fire Rate: 1/${this.playerStats.fireRate}ms
+        Enemy Speed: ${this.enemyStats.moveSpeed}
         XP Multiplier: x ${this.playerStats.xpMultiplier}
         `,
         {

@@ -1,0 +1,104 @@
+// CombatSystem.js
+export default class CombatSystem {
+  constructor(scene) {
+    this.scene = scene;
+  }
+
+  fireProjectile() {
+    const scene = this.scene;
+
+    if (scene.isPlayerDead) return;
+
+    const enemiesAlive = scene.enemies.getChildren().filter((e) => !e.isDead);
+
+    if (enemiesAlive.length === 0) return;
+
+    let closest = enemiesAlive[0];
+    let minDist = Phaser.Math.Distance.Between(
+      scene.player.x,
+      scene.player.y,
+      closest.x,
+      closest.y,
+    );
+
+    enemiesAlive.forEach((enemy) => {
+      const dist = Phaser.Math.Distance.Between(
+        scene.player.x,
+        scene.player.y,
+        enemy.x,
+        enemy.y,
+      );
+      if (dist < minDist) {
+        minDist = dist;
+        closest = enemy;
+      }
+    });
+
+    const projectile = scene.add.rectangle(
+      scene.player.x,
+      scene.player.y,
+      8,
+      8,
+      0xffff00,
+    );
+
+    scene.physics.add.existing(projectile);
+    projectile.body.setAllowGravity(false);
+    projectile.speed = 400;
+    projectile.target = closest;
+
+    scene.projectiles.add(projectile);
+  }
+
+  updateProjectiles() {
+    const scene = this.scene;
+
+    scene.projectiles.getChildren().forEach((proj) => {
+      if (!proj.target || proj.target.isDead) {
+        proj.destroy();
+        return;
+      }
+
+      const dx = proj.target.x - proj.x;
+      const dy = proj.target.y - proj.y;
+      const length = Math.sqrt(dx * dx + dy * dy);
+      const speed = proj.speed;
+
+      if (length < 5) {
+        this.applyDamage(proj.target);
+        proj.destroy();
+        return;
+      }
+
+      proj.body.setVelocity((dx / length) * speed, (dy / length) * speed);
+    });
+  }
+
+  applyDamage(enemy) {
+    const scene = this.scene;
+
+    enemy.hp -= scene.playerStats.damage;
+
+    enemy.setFillStyle(0xff9999);
+
+    scene.time.delayedCall(50, () => {
+      if (enemy && enemy.active) {
+        enemy.setFillStyle(0xff0000);
+      }
+    });
+
+    if (enemy.hp <= 0 && !enemy.isDead) {
+      this.killEnemy(enemy);
+    }
+  }
+
+  killEnemy(enemy) {
+    const scene = this.scene;
+
+    enemy.isDead = true;
+    const { x, y } = enemy;
+
+    enemy.destroy();
+    scene.spawnXpOrb(x, y, enemy.xpValue);
+  }
+}
