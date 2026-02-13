@@ -23,6 +23,10 @@ export default class GameScene extends Phaser.Scene {
     // Set world bounds
     this.physics.world.setBounds(0, 0, 800, 600);
 
+    // Timer
+    this.runTime = 0; // total run time in ms
+    this.lastUpdateTime = 0; // used to calculate delta
+
     // Set default player values
     this.playerStats = {
       moveSpeed: 200,
@@ -124,9 +128,6 @@ export default class GameScene extends Phaser.Scene {
     this.playerStats.xp = 0;
     this.playerStats.xpToLevel = 50; // first level threshold
 
-    // Timer
-    this.startTime = this.time.now;
-
     // Upgrades
     this.upgrades = [
       {
@@ -181,7 +182,7 @@ export default class GameScene extends Phaser.Scene {
     ];
   }
 
-  update() {
+  update(time, delta) {
     // Handle retry
     if (this.isPlayerDead && this.deathKeys) {
       if (
@@ -198,6 +199,11 @@ export default class GameScene extends Phaser.Scene {
       this.scene.launch("PauseScene");
       this.scene.pause();
       return;
+    }
+
+    // Accumulate run time only during active gameplay
+    if (!this.isPlayerDead && !this.isChoosingUpgrade) {
+      this.runTime += delta;
     }
 
     if (this.handleUpgradeInput()) return;

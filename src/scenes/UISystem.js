@@ -114,11 +114,10 @@ export default class UISystem {
     this.levelText.setText("Level: " + ps.level);
 
     // Timer
-    const elapsedSeconds = Math.floor(
-      (scene.time.now - scene.startTime) / 1000,
-    );
-    const minutes = Math.floor(elapsedSeconds / 60);
-    const seconds = elapsedSeconds % 60;
+    const totalSeconds = Math.floor(this.scene.runTime / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
     this.timerText.setText(`${minutes}:${seconds.toString().padStart(2, "0")}`);
   }
 }
