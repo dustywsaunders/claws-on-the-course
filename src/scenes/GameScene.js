@@ -215,139 +215,30 @@ export default class GameScene extends Phaser.Scene {
   }
 
   update() {
-    // Pause gameplay during upgrade
-    if (this.isChoosingUpgrade) {
-      if (
-        Phaser.Input.Keyboard.JustDown(this.upgradeKeys.up) ||
-        Phaser.Input.Keyboard.JustDown(this.upgradeKeys.w)
-      ) {
-        this.selectedUpgradeIndex =
-          (this.selectedUpgradeIndex - 1 + this.upgradeButtons.length) %
-          this.upgradeButtons.length;
+    if (this.handleUpgradeInput()) return;
+    if (this.handleDeathState()) return;
 
-        this.updateUpgradeSelection();
-      }
+    this.handlePlayerMovement();
+    this.handleEnemyMovement();
+    this.handleProjectiles();
+    this.updateUI();
+    this.updateTimer();
+  }
 
-      if (
-        Phaser.Input.Keyboard.JustDown(this.upgradeKeys.down) ||
-        Phaser.Input.Keyboard.JustDown(this.upgradeKeys.s)
-      ) {
-        this.selectedUpgradeIndex =
-          (this.selectedUpgradeIndex + 1) % this.upgradeButtons.length;
+  // --- FUNCTIONS --- //
 
-        this.updateUpgradeSelection();
-      }
-
-      if (
-        Phaser.Input.Keyboard.JustDown(this.upgradeKeys.confirm) ||
-        Phaser.Input.Keyboard.JustDown(this.upgradeKeys.enter)
-      ) {
-        const chosen = this.currentUpgradeChoices[this.selectedUpgradeIndex];
-        chosen.apply();
-
-        this.closeUpgradeMenu();
-      }
-
-      return;
-    }
-
-    // Set death state
-    if (this.isPlayerDead) {
-      this.player.body.setVelocity(0);
-      return;
-    }
-
-    // Update player controls
-    const speed = this.playerSpeed;
-    const body = this.player.body;
-
-    body.setVelocity(0);
-
-    // Horizontal
-    if (this.keys.left.isDown || this.keys.leftArrow.isDown) {
-      body.setVelocityX(-speed);
-    } else if (this.keys.right.isDown || this.keys.rightArrow.isDown) {
-      body.setVelocityX(speed);
-    }
-
-    // Vertical
-    if (this.keys.up.isDown || this.keys.upArrow.isDown) {
-      body.setVelocityY(-speed);
-    } else if (this.keys.down.isDown || this.keys.downArrow.isDown) {
-      body.setVelocityY(speed);
-    }
-
-    // Update enemy controls
-    this.enemies.getChildren().forEach((enemy) => {
-      // Movement
-      const dx = this.player.x - enemy.x;
-      const dy = this.player.y - enemy.y;
-      const length = Math.sqrt(dx * dx + dy * dy);
-      if (length > 0) {
-        const speed = this.enemySpeed;
-        enemy.body.setVelocity((dx / length) * speed, (dy / length) * speed);
-      }
-    });
-
-    // Projectiles
-    this.projectiles.getChildren().forEach((proj) => {
-      if (!proj.target || proj.target.isDead) {
-        proj.destroy();
-        return;
-      }
-
-      const dx = proj.target.x - proj.x;
-      const dy = proj.target.y - proj.y;
-      const length = Math.sqrt(dx * dx + dy * dy);
-      const speed = proj.speed;
-
-      if (length < 5) {
-        // Apply damage
-        proj.target.hp -= this.weaponDamage;
-
-        // --- HIT FLASH ---
-        proj.target.setFillStyle(0xff9999); // lighter red
-
-        this.time.delayedCall(50, () => {
-          if (proj.target && proj.target.active) {
-            proj.target.setFillStyle(0xff0000); // back to normal red
-          }
-        });
-
-        // Death check
-        if (proj.target.hp <= 0 && !proj.target.isDead) {
-          proj.target.hp = 0;
-          proj.target.isDead = true;
-
-          // Store position BEFORE destroy
-          const { x, y } = proj.target;
-
-          proj.target.destroy();
-
-          // Drop XP orb
-          this.spawnXpOrb(x, y, proj.target.xpValue);
-        }
-
-        proj.destroy();
-        return;
-      }
-
-      proj.body.setVelocity((dx / length) * speed, (dy / length) * speed);
-    });
-
-    // TEMPORARY enemy counter
+  updateUI() {
     this.enemyCounterText.setText("Enemies: " + this.enemies.countActive(true));
 
-    // Health bar
     if (!this.isPlayerDead) {
       const healthPercent = Phaser.Math.Clamp(
         this.playerHp / this.playerMaxHp,
         0,
         1,
       );
+
       this.healthBar.width = Math.floor(200 * healthPercent);
 
-      // Change color when low
       if (healthPercent > 0.6) {
         this.healthBar.setFillStyle(0x00ff00);
       } else if (healthPercent > 0.3) {
@@ -356,26 +247,20 @@ export default class GameScene extends Phaser.Scene {
         this.healthBar.setFillStyle(0xff0000);
       }
     } else {
-      // Ensure it stays zero
       this.healthBar.width = 0;
     }
 
-    // Update HP text
     this.healthText.setText(
       `${Math.floor(this.playerHp)} / ${this.playerMaxHp}`,
     );
 
-    // XP Bar
     const xpPercent = Phaser.Math.Clamp(this.xp / this.xpToLevel, 0, 1);
     this.xpBar.width = Math.floor(200 * xpPercent);
-
-    // Update XP text
     this.xpText.setText(`${this.xp} / ${this.xpToLevel}`);
-
-    // Player Level Text
     this.levelText.setText("Level: " + this.playerLevel);
+  }
 
-    // Timer
+  updateTimer() {
     const elapsedSeconds = Math.floor((this.time.now - this.startTime) / 1000);
     const minutes = Math.floor(elapsedSeconds / 60);
     const seconds = elapsedSeconds % 60;
@@ -384,7 +269,24 @@ export default class GameScene extends Phaser.Scene {
     this.timerText.setText(`${minutes}:${paddedSeconds}`);
   }
 
-  // --- FUNCTIONS --- //
+  handlePlayerMovement() {
+    const speed = this.playerSpeed;
+    const body = this.player.body;
+
+    body.setVelocity(0);
+
+    if (this.keys.left.isDown || this.keys.leftArrow.isDown) {
+      body.setVelocityX(-speed);
+    } else if (this.keys.right.isDown || this.keys.rightArrow.isDown) {
+      body.setVelocityX(speed);
+    }
+
+    if (this.keys.up.isDown || this.keys.upArrow.isDown) {
+      body.setVelocityY(-speed);
+    } else if (this.keys.down.isDown || this.keys.downArrow.isDown) {
+      body.setVelocityY(speed);
+    }
+  }
 
   spawnEnemy() {
     const { width, height } = this.scale;
@@ -421,6 +323,19 @@ export default class GameScene extends Phaser.Scene {
     enemy.setDepth(3);
 
     this.enemies.add(enemy);
+  }
+
+  handleEnemyMovement() {
+    this.enemies.getChildren().forEach((enemy) => {
+      const dx = this.player.x - enemy.x;
+      const dy = this.player.y - enemy.y;
+      const length = Math.sqrt(dx * dx + dy * dy);
+
+      if (length > 0) {
+        const speed = this.enemySpeed;
+        enemy.body.setVelocity((dx / length) * speed, (dy / length) * speed);
+      }
+    });
   }
 
   handlePlayerHit(player, enemy) {
@@ -477,6 +392,13 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
+  handleDeathState() {
+    if (!this.isPlayerDead) return false;
+
+    this.player.body.setVelocity(0);
+    return true;
+  }
+
   fireProjectile() {
     if (this.isPlayerDead) return; // don't shoot when dead
 
@@ -520,6 +442,47 @@ export default class GameScene extends Phaser.Scene {
 
     // Add to group
     this.projectiles.add(projectile);
+  }
+
+  handleProjectiles() {
+    this.projectiles.getChildren().forEach((proj) => {
+      if (!proj.target || proj.target.isDead) {
+        proj.destroy();
+        return;
+      }
+
+      const dx = proj.target.x - proj.x;
+      const dy = proj.target.y - proj.y;
+      const length = Math.sqrt(dx * dx + dy * dy);
+      const speed = proj.speed;
+
+      if (length < 5) {
+        proj.target.hp -= this.weaponDamage;
+
+        proj.target.setFillStyle(0xff9999);
+
+        this.time.delayedCall(50, () => {
+          if (proj.target && proj.target.active) {
+            proj.target.setFillStyle(0xff0000);
+          }
+        });
+
+        if (proj.target.hp <= 0 && !proj.target.isDead) {
+          proj.target.hp = 0;
+          proj.target.isDead = true;
+
+          const { x, y } = proj.target;
+
+          proj.target.destroy();
+          this.spawnXpOrb(x, y, proj.target.xpValue);
+        }
+
+        proj.destroy();
+        return;
+      }
+
+      proj.body.setVelocity((dx / length) * speed, (dy / length) * speed);
+    });
   }
 
   spawnXpOrb(x, y, value) {
@@ -619,6 +582,42 @@ export default class GameScene extends Phaser.Scene {
       )
       .setOrigin(0.65, 0.9) // center horizontally
       .setDepth(2001);
+  }
+
+  handleUpgradeInput() {
+    if (!this.isChoosingUpgrade) return false;
+
+    if (
+      Phaser.Input.Keyboard.JustDown(this.upgradeKeys.up) ||
+      Phaser.Input.Keyboard.JustDown(this.upgradeKeys.w)
+    ) {
+      this.selectedUpgradeIndex =
+        (this.selectedUpgradeIndex - 1 + this.upgradeButtons.length) %
+        this.upgradeButtons.length;
+
+      this.updateUpgradeSelection();
+    }
+
+    if (
+      Phaser.Input.Keyboard.JustDown(this.upgradeKeys.down) ||
+      Phaser.Input.Keyboard.JustDown(this.upgradeKeys.s)
+    ) {
+      this.selectedUpgradeIndex =
+        (this.selectedUpgradeIndex + 1) % this.upgradeButtons.length;
+
+      this.updateUpgradeSelection();
+    }
+
+    if (
+      Phaser.Input.Keyboard.JustDown(this.upgradeKeys.confirm) ||
+      Phaser.Input.Keyboard.JustDown(this.upgradeKeys.enter)
+    ) {
+      const chosen = this.currentUpgradeChoices[this.selectedUpgradeIndex];
+      chosen.apply();
+      this.closeUpgradeMenu();
+    }
+
+    return true;
   }
 
   updateUpgradeSelection() {
