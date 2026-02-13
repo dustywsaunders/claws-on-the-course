@@ -1,13 +1,10 @@
 TO DO:
 
-GAME FEATURES:
-- Create start page w/ instructions on how to play. also says "Enter/Space to start game"
+GAME FEATURES/REFACTOR:
 - On death screen add text that says "Enter/Space to retry". Goes back to start menu!!!
 - Add health drops to increase total health pool.
-
-REFACTORS:
 - Extract WeaponSystem (multi-shot, spread, cooldowns)
-- Extract EnemyAISystem
+- Extract EnemyAISystem (smarter enemies, variety, bosses)
 - Extract UpgradeSystem
-- Add scene restart / cleanup safety
+- Add scene restart
 - Add damage events & modifiers

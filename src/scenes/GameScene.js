@@ -10,6 +10,9 @@ export default class GameScene extends Phaser.Scene {
   preload() {}
 
   create() {
+    // Reset Safety
+    this.isPlayerDead = false;
+
     // Define systems
     this.ui = new UISystem(this);
     this.combat = new CombatSystem(this);
