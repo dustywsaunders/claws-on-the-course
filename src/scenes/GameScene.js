@@ -409,13 +409,13 @@ export default class GameScene extends Phaser.Scene {
     enemy.moveSpeed = enemy.baseSpeed * (1 + (difficulty - 1) * 0.4);
 
     // Define enemy type
-    const isSprinter = Math.random() < 0.35;
+    const isSprinter = Math.random() < 0.3;
     enemy.type = isSprinter ? "sprinter" : "walker";
     enemy.maxHp = isSprinter
       ? Math.floor(this.enemyStats.maxHp * 0.6)
       : enemy.maxHp;
     enemy.hp = enemy.maxHp;
-    enemy.moveSpeed = isSprinter ? enemy.moveSpeed * 1.4 : enemy.moveSpeed;
+    enemy.moveSpeed = isSprinter ? enemy.moveSpeed * 1.5 : enemy.moveSpeed;
 
     this.enemies.add(enemy);
   }
