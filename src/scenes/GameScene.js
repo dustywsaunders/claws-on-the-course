@@ -87,7 +87,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Enemy base stats
     this.enemyStats = {
-      moveSpeed: 50,
+      moveSpeed: 40,
       maxHp: 30,
       xpValue: 10,
     };
@@ -421,7 +421,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     const enemy = this.add.sprite(x, y, "crayfish");
-    enemy.setDisplaySize(25, 25);
+    enemy.setDisplaySize(24, 16);
     this.physics.add.existing(enemy);
     enemy.body.setAllowGravity(false);
     enemy.body.setImmovable(true);
@@ -465,7 +465,11 @@ export default class GameScene extends Phaser.Scene {
           enemy.baseSpeed * 0.5, // hard floor (50%)
           enemy.moveSpeed,
         );
+
         enemy.body.setVelocity((dx / length) * speed, (dy / length) * speed);
+
+        // Rotate enemy so BOTTOM of sprite faces player
+        enemy.rotation = Math.atan2(dy, dx) - Math.PI / 2;
       }
     });
   }
@@ -562,6 +566,11 @@ export default class GameScene extends Phaser.Scene {
     this.physics.pause();
     this.isChoosingUpgrade = true;
     this.selectedUpgradeIndex = 0;
+
+    // Pause projectile firing
+    if (this.fireTimer) {
+      this.fireTimer.paused = true;
+    }
 
     // Pause enemy spawning
     if (this.enemySpawnEvent) {
@@ -717,6 +726,11 @@ export default class GameScene extends Phaser.Scene {
 
     this.isChoosingUpgrade = false;
     this.physics.resume();
+
+    // Resume firing after upgrade
+    if (this.fireTimer) {
+      this.fireTimer.paused = false;
+    }
 
     // Resume enemy spawning
     if (this.enemySpawnEvent) {
