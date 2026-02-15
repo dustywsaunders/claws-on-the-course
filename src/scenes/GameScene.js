@@ -20,6 +20,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Reset Safety
     this.isPlayerDead = false;
+    this.isPlayerFlashing = false;
 
     // Define systems
     this.ui = new UISystem(this);
@@ -292,13 +293,18 @@ export default class GameScene extends Phaser.Scene {
     );
 
     // --- PLAYER HIT FLASH ---
-    // this.player.setFillStyle(0xff4444); // flash red on hit
+    if (!this.isPlayerFlashing && !this.isPlayerDead) {
+      this.isPlayerFlashing = true;
 
-    // this.time.delayedCall(80, () => {
-    //   if (!this.isPlayerDead && this.player.active) {
-    //     this.player.setFillStyle(0x00ff00); // back to normal green
-    //   }
-    // });
+      this.player.setTint(0xff4444);
+
+      this.time.delayedCall(80, () => {
+        if (this.player.active && !this.isPlayerDead) {
+          this.player.clearTint();
+        }
+        this.isPlayerFlashing = false;
+      });
+    }
 
     if (this.playerStats.hp < 0) {
       this.playerStats.hp = 0;
